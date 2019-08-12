@@ -1,69 +1,106 @@
-from game import *
+import os
+import pygame as pg
+from settings import *
+from game import Game
 
-class TerminalInterface(Game):
-	"""enables one to issue its move orders to the game. This class provides bindings
-	for all actions and will see that they get doen properly."""
-	def __init__(self, rows=4, columns=4, initial_tiles=2):
-		super(TerminalInterface, self).__init__(rows, columns, initial_tiles)
-		self.mvts = {
-		0: ["left", "l", "4"],
-		1: ["right", "r", "6"],
-		2: ["up", "u", "8"],
-		3: ["down", "d", "2"]
-		}
+#GLOBALS
+running = False
+playing = False
+tilew = int((WIDTH-((COLUMNS-1)*SEP_W))/COLUMNS) #tile placement may benefit from floats
+tileh = int((HEIGHT-((ROWS-1)*SEP_H))/ROWS)
 
-	def show_board(self):
-		'''only exists for testing purposes'''
-		cells = []
-		for cell in self.matrix:
-			p_cell=str(cell)
-			blanck_to_add = 3-len(p_cell)
-			for i in range(blanck_to_add):
-				p_cell=" "+p_cell
-			cells.append(p_cell)
+pg.init()
+window = pg.display.set_mode((WIDTH, HEIGHT))
+pg.display.set_caption("A 2048 clone by s0lst1ce")
 
-		print('''{0[0]} | {0[1]} | {0[2]} | {0[3]}\n-------------------------\n{0[4]} | {0[5]} | {0[6]} | {0[7]}\n-------------------------\n{0[8]} | {0[9]} | {0[10]} | {0[11]}\n-------------------------\n{0[12]} | {0[13]} | {0[14]} | {0[15]}\n'''.format(cells))
+#SPRITES
+def load_sprites():
+	'''returns a dict containing all tiles' sprites surfaces'''
+	surfs = {0:pg.Surface((tilew, tileh))}
+	for file in os.listdir(os.path.join("sprites")):
+		surf=pg.image.load(os.path.join("sprites", file)).convert_alpha()
+		surfs[int(file.split(".")[0])]=pg.transform.scale(surf, (tilew, tileh))
+	return surfs
+sprites = load_sprites()
 
+#DEVELOPMENT
+def show_board(self):
+	'''only exists for testing purposes'''
+	cells = []
+	for cell in self.matrix:
+		p_cell=str(cell)
+		blanck_to_add = 3-len(p_cell)
+		for i in range(blanck_to_add):
+			p_cell=" "+p_cell
+		cells.append(p_cell)
 
-	def main_loop(self):
-		'''at its core a while loop which will wait for the player to input a command from the console.
-		if an incorrect command is given teh user will receive a message
-		allowed commands are self.mvts dict values'''
-		for i in range(self.initial_tiles):
-			self.populate()
-		running = True
-		while running:
-			self.show_board()
-			mv = input(">").lower()
-			if mv == "q":
-				running=False
+	return '''{0[0]} | {0[1]} | {0[2]} | {0[3]}\n-------------------------\n{0[4]} | {0[5]} | {0[6]} | {0[7]}\n-------------------------\n{0[8]} | {0[9]} | {0[10]} | {0[11]}\n-------------------------\n{0[12]} | {0[13]} | {0[14]} | {0[15]}\n'''.format(cells)
 
-			else:
-				found = False
-				for k, v in self.mvts.items():
-					if mv in v:
-						found = True
-						bck_mtx = self.matrix.copy()
-						self.move(k)
-						if bck_mtx != self.matrix:
-							self.populate()
-						else:
-							if self.get_free()==0:
-								running=False
+#SETUP
+def start():
+	'''inits and starts the game'''
+	global running
+	global playing
+	running=True
+	playing=True
+	g = Game(rows=ROWS, columns=COLUMNS)
+	g.make_board()
+	for c in range(g.initial_tiles):
+		g.populate()
+	return g
 
-						break
-
-				if not found:
-					print("Unrecognized command")
-
-		score = self.get_score()
-		if self.won():
-			print("You won ! Good job ! Now that you've mastered the fundamentals why don't you try out new goals ? Try to reach higher numbers and if you have trouble, augment the size of the board.")
-		else:
-			print("You lost ! Will your next try give a 2048 ?")
-		quit()
+g = start()
 
 
+#GAME LOGIC
+def events():
+	'''processes events'''
+	global running
+	for event in pg.event.get():
+		if event.type == pg.QUIT:
+			running=False
 
-g=TerminalInterface()
-g.main_loop()
+	keys = pg.key.get_pressed()
+	if keys[pg.K_ESCAPE]:
+		running = False
+
+def update():
+	'''ran each tick handles all modification based on occured events'''
+	global playing
+	#gui update
+	#game update
+	if playing:
+		game_update()
+	
+def game_update():
+	'''updates the game (ie: not the GUI elements)'''
+	pass
+
+def render():
+	'''handles the rendering'''
+	global window
+	global g
+	global sprites
+	window.fill(WHITE)
+	col = 0
+	for r in range(ROWS):
+		for cell, ci in zip(g.get_row(r), range(COLUMNS)):
+			window.blit(sprites[cell[1]], (ci*(tilew+SEP_W), r*(tileh+SEP_H)))
+
+		col+=1
+
+	pg.display.flip()
+
+
+def main_loop():
+	'''main game logic handler'''
+	global running
+	global g
+	print(show_board(g))
+	while running:
+		events()
+		update()
+		render()
+	print(f'''You won: {g.won()} with {g.get_score()}''')
+
+main_loop()

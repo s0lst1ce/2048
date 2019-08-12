@@ -1,6 +1,5 @@
 import random
 
-
 class Game(object):
 	"""the class wihch handles all operations and teh game continuity"""
 	def __init__(self, rows=4, columns=4, initial_tiles=2):
@@ -8,7 +7,7 @@ class Game(object):
 		self.columns=columns
 		self.initial_tiles=2
 		#making the according matrix
-		self.make_board(self.rows, self.columns)
+		self.make_board()
 		
 	def get_row(self, row):
 		row_members = []
@@ -34,9 +33,9 @@ class Game(object):
 		return col_members
 
 
-	def make_board(self, rows=4, columns=4):
+	def make_board(self):
 		self.matrix = []
-		for  i in range(rows*columns):
+		for  i in range(self.rows*self.columns):
 			self.matrix.append(0)
 
 
@@ -57,8 +56,8 @@ class Game(object):
 
 		#may wish to change this static probability so a more evolutive and pondered one
 		prob = []
-		for j in range(10):prob.append(2)
-		for j in range(3):prob.append(4)
+		for j in range(9):prob.append(2)
+		for j in range(1):prob.append(4)
 		value = random.choice(prob)
 
 		self.matrix[cell]=value
