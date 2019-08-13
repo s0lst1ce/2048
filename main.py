@@ -12,6 +12,7 @@ tileh = int((HEIGHT-((ROWS-1)*SEP_H))/ROWS)
 pg.init()
 window = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption("A 2048 clone by s0lst1ce")
+clock = pg.time.Clock()
 
 #SPRITES
 def load_sprites():
@@ -56,13 +57,28 @@ g = start()
 def events():
 	'''processes events'''
 	global running
+	global g
 	for event in pg.event.get():
 		if event.type == pg.QUIT:
 			running=False
 
-	keys = pg.key.get_pressed()
-	if keys[pg.K_ESCAPE]:
-		running = False
+		if event.type == pg.KEYUP:
+			if event.key==pg.K_ESCAPE:
+				running = False
+
+			#handling movement
+			old_matrix = g.matrix.copy()
+			if event.key==pg.K_LEFT:
+				g.move(0)
+			if event.key==pg.K_RIGHT:
+				g.move(1)
+			if event.key==pg.K_UP:
+				g.move(2)
+			if event.key==pg.K_DOWN:
+				g.move(3)
+
+			if g.matrix!=old_matrix:
+				g.populate()
 
 def update():
 	'''ran each tick handles all modification based on occured events'''
@@ -74,7 +90,11 @@ def update():
 	
 def game_update():
 	'''updates the game (ie: not the GUI elements)'''
-	pass
+	global g
+	global playing
+	global running
+	if len(g.get_free())==0:
+		running = False
 
 def render():
 	'''handles the rendering'''
@@ -96,8 +116,10 @@ def main_loop():
 	'''main game logic handler'''
 	global running
 	global g
+	global clock
 	print(show_board(g))
 	while running:
+		clock.tick()
 		events()
 		update()
 		render()
