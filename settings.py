@@ -26,8 +26,8 @@ DARK_GREY = (78, 78, 78, 255)
 #                                       #
 #                                       #
 #########################################
-WIDTH = 1000
-HEIGHT = 1000
+WIDTH = 800
+HEIGHT = 800
 COLUMNS = 4
 ROWS = 4
 #the size of the separators between tiles, in pixel

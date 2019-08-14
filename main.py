@@ -9,10 +9,17 @@ playing = False
 tilew = int((WIDTH-((COLUMNS-1)*SEP_W))/COLUMNS) #tile placement may benefit from floats
 tileh = int((HEIGHT-((ROWS-1)*SEP_H))/ROWS)
 
+#display
 pg.init()
 window = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption("A 2048 clone by s0lst1ce")
 clock = pg.time.Clock()
+
+#sound
+pg.mixer.init()
+musics =[]
+for music in os.listdir(os.path.join("audio")):
+	musics.append(pg.mixer.music.load(os.path.join("audio", music)))
 
 #SPRITES
 def load_sprites():
@@ -118,6 +125,7 @@ def main_loop():
 	global g
 	global clock
 	print(show_board(g))
+	pg.mixer.music.play()
 	while running:
 		clock.tick()
 		events()

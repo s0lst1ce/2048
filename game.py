@@ -98,6 +98,7 @@ class Game(object):
 					col.reverse()
 
 		#print(rc, "\n")
+		has_merged=[]
 		for line in rc:
 			line_stacked = False
 			while not line_stacked:
@@ -109,10 +110,14 @@ class Game(object):
 						line_stacked=False
 
 					#merging
-					elif cell[1]==line[idx+1][1] and cell[1]!=0:
+					elif cell[1]==line[idx+1][1] and cell[1]!=0 and cell[0] not in has_merged:
 						cell[1]+=line[idx+1][1]
 						line[idx+1][1] = 0
 						line_stacked=False
+						if side<2:
+							has_merged.append(cell[0]-1)
+						else:
+							has_merged.append(cell[0]+4)
 
 
 		for line in rc:
