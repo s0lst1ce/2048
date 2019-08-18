@@ -20,6 +20,7 @@ pg.mixer.init()
 musics =[]
 for music in os.listdir(os.path.join("audio")):
 	musics.append(pg.mixer.music.load(os.path.join("audio", music)))
+	#pg.mixer.music.queue(musics[-1])
 
 #SPRITES
 def load_sprites():
@@ -87,6 +88,10 @@ def events():
 			if g.matrix!=old_matrix:
 				g.populate()
 
+		#loop music
+		if not pg.mixer.music.get_busy():
+			pg.mixer.music.rewind()
+
 def update():
 	'''ran each tick handles all modification based on occured events'''
 	global playing
@@ -125,7 +130,7 @@ def main_loop():
 	global g
 	global clock
 	print(show_board(g))
-	pg.mixer.music.play()
+	pg.mixer.music.play(-1)
 	while running:
 		clock.tick()
 		events()
