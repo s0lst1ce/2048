@@ -26,6 +26,7 @@ for music in os.listdir(os.path.join("audio")):
 def load_sprites():
 	'''returns a dict containing all tiles' sprites surfaces'''
 	surfs = {0:pg.Surface((tilew, tileh))}
+	surfs[0].fill(WHITE)
 	for file in os.listdir(os.path.join("sprites")):
 		surf=pg.image.load(os.path.join("sprites", file)).convert_alpha()
 		surfs[int(file.split(".")[0])]=pg.transform.scale(surf, (tilew, tileh))
