@@ -19,18 +19,18 @@ jobs:
         python-version: [3.7]
 
     steps:
-      - name: Setting up Python ${{ matrix.python-version }}
-        with:
-          python-version: ${{ matrix.python-version}}
-      - name: Installing dependencies
-        run: |
-          echo Installing dependencies...
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install --upgrade cx_Freeze
-      - name: Building ${{ matrix.os }} executable
-        with:
-          python-version: ${{ matrix.python-version }}
-        run: |
-          echo Building exeutable...
-          cxfreeze main.py --target-dir app --target-name 2048
+    - name: Setting up Python ${{ matrix.python-version }}
+      with:
+        python-version: ${{ matrix.python-version}}
+    - name: Installing dependencies
+      run: |
+        echo Installing dependencies...
+        python -m pip install --upgrade pip
+        python -m pip install -r requirements.txt
+        python -m pip install --upgrade cx_Freeze
+    - name: Building ${{ matrix.os }} executable
+      with:
+        python-version: ${{ matrix.python-version }}
+      run: |
+        echo Building exeutable...
+        cxfreeze main.py --target-dir app --target-name 2048
