@@ -1,0 +1,35 @@
+name: Python package
+
+on:
+  push:
+    branches:
+      - pygame
+      - 'releases/*'
+
+    paths:
+      - '*.py'
+
+jobs:
+  linux-build:
+
+    runs-on: ${{ matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        python-version: [3.7]
+
+    steps:
+      - name: Installing dependencies for python ${{ matrix.python-version }}
+        with:
+          python-version: ${{ matrix.python-version}}
+        run: |
+          echo Installing dependencies...
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install --upgrade cx_Freeze
+      - name: Building ${{ matrix.os }} executable
+        with:
+          python-version: ${{ matrix.python-version }}
+        run: |
+          echo Building exeutable...
+          cxfreeze main.py --target-dir app --target-name 2048
