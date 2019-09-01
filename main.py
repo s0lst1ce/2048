@@ -130,7 +130,6 @@ def main_loop():
 	global running
 	global g
 	global clock
-	print(show_board(g))
 	pg.mixer.music.play(-1)
 	while running:
 		clock.tick()
