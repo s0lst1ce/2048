@@ -39,6 +39,6 @@ jobs:
       run: |
         zip build.zip build/ -r
     - name: Zip Windows app
-      if: matrix.os == windows-latest
+      if: matrix.os == 'windows-latest'
       run: |
         powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::CreateFromDirectory('build', 'windows-build.zip'); }"
