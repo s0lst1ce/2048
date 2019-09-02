@@ -2,7 +2,7 @@ import os
 import pygame as pg
 from settings import *
 from game import Game
-#8
+#9
 #GLOBALS
 running = False
 playing = False
