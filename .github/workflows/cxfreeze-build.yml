@@ -12,7 +12,7 @@ on:
 jobs:
   build:
 
-    runs-on: ${{ matrix.os}}
+    runs-on: ${{matrix.os}}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
@@ -38,6 +38,12 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Compile with cx_Freeze
       run: |
-        cxfreeze main.py --target-dir dist --target-name 2048 --include-modules=pygame
-        zip linux-build.zip dist/ -r
-
+        python setup.py build
+    - name: Zip UNIX app
+      if: ${{matrix.os}} ! windows-latest
+      run: |
+        zip ${{matrix.os}}-build.zip build/ -r
+    - name: Zip Windows app
+      if: ${{matrix.os}} == windows-latest
+      run: |
+        powershell.exe -nologo -noprofile -command "& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::CreateFromDirectory('build', 'windows-build.zip'); }"
