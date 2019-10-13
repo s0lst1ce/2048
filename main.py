@@ -2,7 +2,8 @@ import os
 import pygame as pg
 from settings import *
 from game import Game
-#20
+import pigui as pig
+from pigui.colors import *
 #GLOBALS
 running = False
 playing = False
@@ -14,6 +15,16 @@ pg.init()
 window = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption("A 2048 clone by s0lst1ce")
 clock = pg.time.Clock()
+
+#GUI
+main_menu = pig.Container(0, 0, WIDTH, HEIGHT, visible=False)
+
+score_box = pig.Container(WIDTH - SCORE_W, 10, SCORE_W, SCORE_H, visible=True)
+score = pig.Label(SCORE_W, SCORE_H, text="000000", fgcolor=BLACK)
+tb = pig.TextButton(100,50,text="Hello", fgcolor=GREEN, action=lambda:print("hey!"))
+score_box.add(score, 0, 0, ch=100, cw=100)
+main_menu.add(tb, 0,0)
+print(score_box)
 
 #sound
 pg.mixer.init()
@@ -33,19 +44,6 @@ def load_sprites():
 	return surfs
 sprites = load_sprites()
 
-#DEVELOPMENT
-def show_board(self):
-	'''only exists for testing purposes'''
-	cells = []
-	for cell in self.matrix:
-		p_cell=str(cell)
-		blanck_to_add = 3-len(p_cell)
-		for i in range(blanck_to_add):
-			p_cell=" "+p_cell
-		cells.append(p_cell)
-
-	return '''{0[0]} | {0[1]} | {0[2]} | {0[3]}\n-------------------------\n{0[4]} | {0[5]} | {0[6]} | {0[7]}\n-------------------------\n{0[8]} | {0[9]} | {0[10]} | {0[11]}\n-------------------------\n{0[12]} | {0[13]} | {0[14]} | {0[15]}\n'''.format(cells)
-
 #SETUP
 def start():
 	'''inits and starts the game'''
@@ -60,13 +58,14 @@ def start():
 	return g
 
 g = start()
+score.text=str(g.get_score())
+score_box.visible=True
 
 
 #GAME LOGIC
 def events():
 	'''processes events'''
 	global running
-	global g
 	for event in pg.event.get():
 		if event.type == pg.QUIT:
 			running=False
@@ -88,6 +87,7 @@ def events():
 
 			if g.matrix!=old_matrix:
 				g.populate()
+			score.text=str(g.get_score())
 
 		#loop music
 		if not pg.mixer.music.get_busy():
@@ -95,25 +95,19 @@ def events():
 
 def update():
 	'''ran each tick handles all modification based on occured events'''
-	global playing
 	#gui update
+	score_box.update()
 	#game update
 	if playing:
 		game_update()
 	
 def game_update():
 	'''updates the game (ie: not the GUI elements)'''
-	global g
-	global playing
-	global running
 	if len(g.get_free())==0:
 		running = False
 
 def render():
 	'''handles the rendering'''
-	global window
-	global g
-	global sprites
 	window.fill(WHITE)
 	col = 0
 	for r in range(ROWS):
@@ -122,14 +116,13 @@ def render():
 
 		col+=1
 
+	score_box.draw(window)
+	main_menu.draw(window)
 	pg.display.flip()
 
 
 def main_loop():
 	'''main game logic handler'''
-	global running
-	global g
-	global clock
 	pg.mixer.music.play(-1)
 	while running:
 		clock.tick()
