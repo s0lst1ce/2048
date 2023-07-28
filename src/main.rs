@@ -1,17 +1,23 @@
 use b2048::*;
-use bevy::prelude::*;
+use bevy::{app::AppExit, prelude::*};
 use rand::{seq::IteratorRandom, thread_rng};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(GameAssetsPlugin)
-        .add_system(bevy::window::close_on_esc)
-        .insert_resource(ClearColor(Color::WHITE))
+        .add_state::<AppState>()
+        .add_plugins(GameAssetsPlugin)
+        .add_systems(Update, bevy::window::close_on_esc)
         .add_event::<GameOver>()
-        .add_system(setup_board.in_schedule(OnEnter(AppState::Finished)))
-        .add_startup_system(setup_board)
-        .add_system(place_new_tile)
+        .add_event::<SpawnTile>()
+        .insert_resource(ClearColor(Color::WHITE))
+        .add_systems(OnEnter(AppState::Setup), setup_board)
+        .add_systems(OnEnter(AppState::Setup), setup.after(setup_board))
+        //the systems responsible for running the game
+        .add_systems(
+            Update,
+            (spawn_tile, game_over).run_if(in_state(AppState::InGame)),
+        )
         .run();
 }
 
@@ -22,29 +28,8 @@ struct Tile;
 struct TileBundle {
     position: Position,
     kind: TileKind,
-    sprite: SpriteBundle,
-}
-
-impl TileBundle {
-    fn new(position: Position, kind: TileKind, tile_texture_handle: TileTextureHandle) -> Self {
-        Self {
-            position,
-            kind,
-            sprite: SpriteBundle {
-                texture: tile_texture_handle.0,
-                transform: Transform {
-                    translation: Vec3 {
-                        x: 10.0,
-                        y: 10.0,
-                        z: 1.0,
-                    },
-                    scale: Vec3::default(),
-                    ..default()
-                },
-                ..default()
-            },
-        }
-    }
+    sprite: SpriteSheetBundle,
+    _tile: Tile,
 }
 
 ///The position of the tile of the board
@@ -69,6 +54,10 @@ impl TileKind {
     fn from_value(value: u32) -> Self {
         TileKind(value.ilog2())
     }
+
+    fn index(&self) -> usize {
+        self.0 as usize
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -77,90 +66,88 @@ enum FinishReason {
     Won,
 }
 
-#[derive(Debug)]
+#[derive(Event, Debug)]
 struct GameOver(FinishReason);
+
+#[derive(Event, Debug, Clone, Copy)]
+struct SpawnTile;
 
 fn new_tile_value() -> TileKind {
     TileKind(1)
 }
 
-#[derive(Debug, Resource, Clone)]
-struct TileTextureHandle(Handle<Image>);
-
-fn place_new_tile(
+fn spawn_tile(
     mut commands: Commands,
     tiles: Query<&Position, With<Tile>>,
     board: Res<Board>,
+    new_tiles: EventReader<SpawnTile>,
     mut game_over: EventWriter<GameOver>,
-    tile_texture_handle: Res<TileTextureHandle>,
+    tiles_atlas: Res<TilesAtlas>,
 ) {
     //finding free tiles
     let mut occupied = Vec::with_capacity(board.columns * board.rows);
 
     tiles.iter().for_each(|pos| occupied.push(pos));
 
+    let amount = new_tiles.len();
+    //we make sure there's enough space to spawn all the tiles necessary
+    if occupied.capacity() - occupied.len() < amount {
+        game_over.send(GameOver(FinishReason::Lost));
+        return;
+    }
+
     let mut rng = thread_rng();
     //choosing where to create the new tile if possible
-    if let Some(pos) = (0..(board.columns * board.rows))
-        .filter(|pos| !occupied.contains(&&Position(*pos)))
-        .choose(&mut rng)
-    {
-        commands.spawn(TileBundle::new(
-            Position(pos),
-            new_tile_value(),
-            tile_texture_handle.clone(),
-        ));
-    } else {
-        game_over.send(GameOver(FinishReason::Lost));
-    }
+    let atlas_handle = tiles_atlas.0.clone(); //fixme, there's one too many clone
+    commands.spawn_batch(
+        (0..(board.columns * board.rows))
+            .filter(|pos| !occupied.contains(&&Position(*pos)))
+            .choose_multiple(&mut rng, amount)
+            .into_iter()
+            .map(move |pos| {
+                let kind = new_tile_value();
+                TileBundle {
+                    position: Position(pos),
+                    kind,
+                    sprite: SpriteSheetBundle {
+                        sprite: TextureAtlasSprite::new(kind.index()),
+                        texture_atlas: atlas_handle.clone(),
+                        ..default()
+                    },
+                    _tile: Tile,
+                }
+            }),
+    );
 }
 
-fn setup_board(
-    mut commands: Commands,
-    tile_handles: Res<TileHandles>,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    mut textures: ResMut<Assets<Image>>,
-) {
-    //making tile assets available
-    let mut texture_atlas_builder = TextureAtlasBuilder::default();
-    for handle in &tile_handles.0 {
-        let handle = handle.typed_weak();
-        let Some(texture) = textures.get(&handle) else {
-            warn!("{:?} did not resolve to an `Image` asset", asset_server.get_handle_path(handle));
-            continue;
-        };
-
-        texture_atlas_builder.add_texture(handle, texture);
-    }
-
-    let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
-    let texture_atlas_texture = texture_atlas.texture.clone();
-    let _atlas_handle = texture_atlases.add(texture_atlas);
-    let tile_texture_handle = TileTextureHandle(texture_atlas_texture);
-    commands.insert_resource(tile_texture_handle.clone());
-
+fn setup_board(mut commands: Commands) {
     //board description
     let board = Board {
         columns: 4,
         rows: 4,
     };
+    commands.insert_resource(board);
+}
+
+fn setup(
+    mut commands: Commands,
+    mut spawn_tiles: EventWriter<SpawnTile>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    commands.spawn(Camera2dBundle::default());
 
     //placing initial tiles
-    let mut rng = thread_rng();
-    (0..(board.columns * board.rows))
-        .choose_multiple(&mut rng, 2)
-        .into_iter()
-        .map(Position)
-        .for_each(|pos| {
-            commands.spawn(TileBundle::new(
-                pos,
-                new_tile_value(),
-                tile_texture_handle.clone(),
-            ));
-        });
+    spawn_tiles.send_batch([SpawnTile; 2]);
 
-    commands.insert_resource(board);
+    //starting the game
+    next_state.set(AppState::InGame);
 
     info!("Game setup completed");
+}
+
+fn game_over(game_over: EventReader<GameOver>, mut exit: EventWriter<AppExit>) {
+    if !game_over.is_empty() {
+        info!("Game ended");
+        exit.send(AppExit);
+    }
 }
