@@ -1,6 +1,9 @@
+#![allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub mod assets;
+pub mod tiling;
 
 pub use assets::*;
+pub use tiling::*;
 
 use bevy::prelude::*;
 
@@ -19,3 +22,12 @@ impl States for AppState {
         [AppState::Loading, AppState::Setup, AppState::InGame].into_iter()
     }
 }
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum FinishReason {
+    Lost,
+    Won,
+}
+
+#[derive(Event, Debug)]
+pub struct GameOver(FinishReason);
