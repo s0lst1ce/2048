@@ -60,7 +60,7 @@ fn post_load_setup(
     commands.insert_resource(TilesAtlas(atlas_handle));
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct GameAssetsPlugin;
 
 impl Plugin for GameAssetsPlugin {
