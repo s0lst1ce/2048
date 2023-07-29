@@ -1,8 +1,12 @@
 #![allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub mod assets;
+pub mod moving;
+pub mod settings;
 pub mod tiling;
 
 pub use assets::*;
+pub use moving::*;
+pub use settings::*;
 pub use tiling::*;
 
 use bevy::prelude::*;

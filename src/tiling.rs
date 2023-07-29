@@ -55,6 +55,12 @@ struct TileBundle {
 #[derive(Component, Debug, PartialEq, PartialOrd, Ord, Eq, Copy, Clone)]
 pub struct Position(usize);
 
+impl From<usize> for Position {
+    fn from(value: usize) -> Self {
+        Position(value)
+    }
+}
+
 impl Position {
     fn to_translation(self, tiling: &Tiling, board: &Board, window: &Window) -> Vec3 {
         let mut translation = Vec3::ZERO;
@@ -70,16 +76,20 @@ impl Position {
             + col.saturating_sub(1) as f32 * tiling.horizontal_spacing
             - (window.width() - tiling.width) / 2.0;
 
-        // same as above but for the ordinates
+        // same as above but for the ordinates, signs are opposed because up is positive
         translation.y = -(row as f32 * tiling.height)
             - row.saturating_sub(1) as f32 * tiling.vertical_spacing
             + (window.height() - tiling.height) / 2.0;
 
         translation
     }
+
+    pub fn index(&self) -> usize {
+        self.0
+    }
 }
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Clone)]
 pub struct Board {
     pub columns: usize,
     pub rows: usize,
@@ -101,11 +111,14 @@ impl Default for Board {
 pub struct TileKind(u32);
 
 impl TileKind {
+    pub fn from_power(pow: u32) -> Self {
+        TileKind(pow)
+    }
     pub fn from_value(value: u32) -> Self {
         TileKind(value.ilog2())
     }
 
-    fn index(&self) -> usize {
+    pub fn power(&self) -> usize {
         self.0 as usize
     }
 
@@ -119,59 +132,96 @@ impl TileKind {
     }
 }
 
-#[derive(Event, Debug, Clone, Copy)]
-pub struct SpawnTile;
+#[derive(Event, Debug, Clone, Copy, Default)]
+pub struct SpawnTile {
+    pub position: Option<Position>,
+    pub kind: Option<TileKind>,
+}
+
 pub fn spawn_tile(
     mut commands: Commands,
     tiles: Query<&Position, With<Tile>>,
     board: Res<Board>,
     tiling: Res<Tiling>,
-    new_tiles: EventReader<SpawnTile>,
+    mut new_tiles: EventReader<SpawnTile>,
     mut game_over: EventWriter<GameOver>,
     tiles_atlas: Res<TilesAtlas>,
 ) {
     if new_tiles.is_empty() {
         return;
     }
+    let mut positions = vec![];
+    let mut values = vec![];
+
+    let mut random = 0;
+    for SpawnTile { position, kind } in new_tiles.into_iter() {
+        if let Some(pos) = position {
+            positions.push(*pos);
+        } else {
+            random += 1
+        }
+        if let Some(value) = kind {
+            values.push(*value);
+        }
+    }
+
     //finding free tiles
     let mut occupied = Vec::with_capacity(board.columns * board.rows);
 
-    tiles.iter().for_each(|pos| occupied.push(pos));
+    tiles
+        .iter()
+        .chain(positions.iter())
+        .for_each(|pos| occupied.push(pos));
 
-    let amount = new_tiles.len();
     //we make sure there's enough space to spawn all the tiles necessary
-    if occupied.capacity() - occupied.len() < amount {
+    if occupied.capacity() - occupied.len() < random {
         game_over.send(GameOver(FinishReason::Lost));
         return;
     }
 
+    //we add just enough random positions
     let mut rng = thread_rng();
+    positions.extend(
+        (0..(board.columns * board.rows))
+            .map(|pos| Position(pos))
+            .filter(|pos| !occupied.contains(&pos))
+            .choose_multiple(&mut rng, random),
+    );
+
+    //we create missing tile values for to push
+    while values.len() < positions.len() {
+        values.push(TileKind::new_tile_value())
+    }
+    let mut value = values.into_iter();
+
     //choosing where to create the new tile if possible
     let atlas_handle = tiles_atlas.0.clone(); //fixme, there's one too many clone
     let (abscissa, ordinate) = (tiling.horizontal_scale, tiling.vertical_scale);
-    commands.spawn_batch(
-        (0..(board.columns * board.rows))
-            .filter(|pos| !occupied.contains(&&Position(*pos)))
-            .choose_multiple(&mut rng, amount)
-            .into_iter()
-            .map(move |pos| {
-                let kind = TileKind::new_tile_value();
-                TileBundle {
-                    position: Position(pos),
-                    kind,
-                    sprite: SpriteSheetBundle {
-                        transform: Transform {
-                            scale: Vec3::new(abscissa, ordinate, 1.0),
-                            ..default()
-                        },
-                        sprite: TextureAtlasSprite::new(kind.index()),
-                        texture_atlas: atlas_handle.clone(),
-                        ..default()
-                    },
-                    _tile: Tile,
-                }
-            }),
-    );
+    commands.spawn_batch(positions.into_iter().map(move |pos| {
+        let kind = value.next().unwrap();
+        TileBundle {
+            position: pos,
+            kind,
+            sprite: SpriteSheetBundle {
+                transform: Transform {
+                    scale: Vec3::new(abscissa, ordinate, 1.0),
+                    ..default()
+                },
+                sprite: TextureAtlasSprite::new(kind.power()),
+                texture_atlas: atlas_handle.clone(),
+                ..default()
+            },
+            _tile: Tile,
+        }
+    }));
+}
+
+fn update_value(
+    mut tiles: Query<(&TileKind, &mut TextureAtlasSprite), (With<Tile>, Changed<TileKind>)>,
+) {
+    for (kind, mut sprite) in tiles.iter_mut() {
+        *sprite = TextureAtlasSprite::new(kind.power())
+    }
 }
 
 fn move_tiles(
@@ -245,8 +295,9 @@ impl Plugin for TilingPlugin {
             .init_resource::<Tiling>()
             .add_systems(
                 Update,
-                (resize_tiles.before(spawn_tile), spawn_tile, move_tiles)
+                (resize_tiles.before(spawn_tile), move_tiles, update_value)
                     .run_if(in_state(AppState::InGame)),
-            );
+            )
+            .add_systems(PostUpdate, spawn_tile);
     }
 }

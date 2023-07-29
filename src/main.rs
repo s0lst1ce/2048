@@ -11,6 +11,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 resolution: WindowResolution::new(900.0, 900.0),
+                title: "A 2048 clone by s0lst1ce".to_string(),
                 ..default()
             }),
             ..default()
@@ -18,7 +19,12 @@ fn main() {
         .add_state::<AppState>()
         .add_event::<GameOver>()
         .insert_resource(ClearColor(Color::WHITE))
-        .add_plugins((GameAssetsPlugin, TilingPlugin))
+        .add_plugins((
+            GameAssetsPlugin,
+            UserSettingsPlugin,
+            TilingPlugin,
+            MovingPlugin,
+        ))
         .add_systems(OnEnter(AppState::Setup), setup)
         //the systems responsible for running the game
         .add_systems(
@@ -61,7 +67,7 @@ fn setup(
     );
 
     //placing initial tiles
-    spawn_tiles.send_batch([SpawnTile; 2]);
+    spawn_tiles.send_batch([SpawnTile::default(); 2]);
 
     //starting the game
     next_state.set(AppState::InGame);
