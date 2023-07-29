@@ -93,8 +93,6 @@ fn apply_move(
 }
 
 mod tracker {
-    use bevy::prelude::info;
-
     use crate::{Board, Position, TileKind};
 
     use super::Direction;
@@ -118,33 +116,58 @@ mod tracker {
 
         /// Slice of (`real_position`, `kind`), the `nth` one for `direction`
         fn stack(&self, direction: Direction, nth: usize) -> Option<Vec<(usize, usize)>> {
-            if direction != Direction::Left {
-                unimplemented!()
-            }
+            use Direction::*;
             if nth >= self.board.rows {
                 None
             } else {
-                Some(
-                    self.tiles
-                        .iter()
-                        .enumerate()
-                        .filter(|(idx, _)| idx / self.board.columns == nth)
-                        .map(|(idx, kind)| (idx, *kind))
-                        .collect::<Vec<_>>(),
-                )
+                let stack = self
+                    .tiles
+                    .iter()
+                    .enumerate()
+                    //todo move this match outside the closure  so we only check once
+                    .filter(|(idx, _)| match direction {
+                        Left | Right => idx / self.board.columns == nth,
+                        Up | Down => idx % self.board.columns == nth,
+                    })
+                    .map(|(idx, kind)| (idx, *kind));
+
+                let stack = match direction {
+                    Right | Down => stack.rev().collect(),
+                    Left | Up => stack.collect(),
+                };
+
+                Some(stack)
+            }
+        }
+
+        fn transform<F>(&mut self, direction: Direction, tranformation: F)
+        where
+            //stack -> (stack, changed)
+            F: Fn(Vec<(usize, usize)>) -> (Vec<(usize, usize)>, bool),
+        {
+            use Direction::*;
+            for i in 0..match direction {
+                Left | Right => self.board.rows,
+                Up | Down => self.board.columns,
+            } {
+                //applying the changes to the current board
+                let (out_stack, changed) = tranformation(self.stack(direction, i).unwrap());
+                self.changed |= changed;
+                for (real_pos, kind) in out_stack {
+                    self.tiles[real_pos] = kind
+                }
             }
         }
 
         pub fn go(&mut self, direction: Direction) {
-            for i in 0..self.board.rows {
-                let mut stack = self.stack(direction, i).unwrap();
-
+            self.transform(direction, |mut stack| {
                 let mut last = 0;
                 let mut cursor = last;
+                let mut changed = false;
 
                 while let Some(&(_, kind)) = stack.get(cursor) {
                     if kind != 0 {
-                        self.changed = true;
+                        changed = true;
                         //we must set the cursor's tile to zero first because it cursor==last it'd overwrite the data otherwise
                         stack[cursor].1 = 0; // since the tile was moved there's nothing in its stead
                         stack[last].1 = kind; // tile is put in the last free position
@@ -153,30 +176,22 @@ mod tracker {
                     }
                     cursor += 1
                 }
-
-                //applying the changes to the current board
-                for (real_pos, kind) in stack {
-                    self.tiles[real_pos] = kind
-                }
-            }
+                (stack, changed)
+            });
         }
 
         pub fn merge(&mut self, direction: Direction) {
-            for i in 0..self.board.rows {
-                let mut stack = self.stack(direction, i).unwrap();
+            self.transform(direction, |mut stack| {
+                let mut changed = false;
                 for j in 0..(stack.len() - 1) {
                     if stack[j].1 != 0 && stack[j].1 == stack[j + 1].1 {
-                        self.changed = true;
+                        changed = true;
                         stack[j].1 *= 2; //the tile we merge into
                         stack[j + 1].1 = 0; //the tile that has now been destroyed for the merge
                     }
                 }
-
-                //applying the changes to the current board
-                for (real_pos, kind) in stack {
-                    self.tiles[real_pos] = kind
-                }
-            }
+                (stack, changed)
+            });
         }
 
         pub fn tiles(&mut self) -> Vec<(Position, TileKind)> {
