@@ -4,20 +4,33 @@ use bevy::{asset::LoadState, prelude::*};
 #[derive(Debug, Resource, Default)]
 pub struct TileHandles(pub Vec<Handle<Image>>);
 
+impl TileHandles {
+    const TILES: [u32; 14] = [
+        0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192,
+    ];
+    fn paths() -> impl IntoIterator<Item = String> {
+        Self::TILES.map(|int| format!("tiles/{int}.png"))
+    }
+}
+
 #[derive(Debug, Resource, Default)]
 pub struct TilesAtlas(pub Handle<TextureAtlas>);
 
-fn load_assets(mut tiles_handles: ResMut<TileHandles>, asset_server: Res<AssetServer>) {
-    tiles_handles.0 = asset_server
+fn load_assets(mut tile_handles: ResMut<TileHandles>, asset_server: Res<AssetServer>) {
+    asset_server
         .load_folder("tiles")
         .map_err(|err| {
             error!("missing `assets/tiles` folder");
             err
         })
-        .unwrap()
-        .iter()
-        .map(|handle| handle.clone().typed())
-        .collect();
+        .unwrap();
+    let mut tiles = Vec::with_capacity(TileHandles::TILES.len());
+    for path in TileHandles::paths() {
+        let handle = asset_server.get_handle(&path);
+        tiles.push(handle);
+    }
+
+    tile_handles.0 = tiles;
 }
 
 fn check_assets(
@@ -55,7 +68,7 @@ fn post_load_setup(
     }
 
     let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
-    let atlas_handle = texture_atlases.add(texture_atlas);
+    let atlas_handle = texture_atlases.add(texture_atlas.clone());
 
     commands.insert_resource(TilesAtlas(atlas_handle));
 }

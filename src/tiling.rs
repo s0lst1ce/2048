@@ -183,7 +183,7 @@ pub fn spawn_tile(
     let mut rng = thread_rng();
     positions.extend(
         (0..(board.columns * board.rows))
-            .map(|pos| Position(pos))
+            .map(Position)
             .filter(|pos| !occupied.contains(&pos))
             .choose_multiple(&mut rng, random),
     );
@@ -218,9 +218,17 @@ pub fn spawn_tile(
 
 fn update_value(
     mut tiles: Query<(&TileKind, &mut TextureAtlasSprite), (With<Tile>, Changed<TileKind>)>,
+    tiles_atlas: Res<TilesAtlas>,
+    atlas: Res<Assets<TextureAtlas>>,
+    tile_handles: Res<TileHandles>,
 ) {
     for (kind, mut sprite) in tiles.iter_mut() {
-        *sprite = TextureAtlasSprite::new(kind.power())
+        let index = atlas
+            .get(&tiles_atlas.0)
+            .expect("`TilesAtlas` should be set at this point")
+            .get_texture_index(&tile_handles.0[kind.power()])
+            .unwrap();
+        *sprite = TextureAtlasSprite::new(index)
     }
 }
 

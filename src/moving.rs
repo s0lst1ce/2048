@@ -186,7 +186,7 @@ mod tracker {
                 for j in 0..(stack.len() - 1) {
                     if stack[j].1 != 0 && stack[j].1 == stack[j + 1].1 {
                         changed = true;
-                        stack[j].1 *= 2; //the tile we merge into
+                        stack[j].1 += 1; //the tile we merge into, we simply increase the index by one since the value is the power, not the shown value itself
                         stack[j + 1].1 = 0; //the tile that has now been destroyed for the merge
                     }
                 }
