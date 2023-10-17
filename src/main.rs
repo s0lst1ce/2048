@@ -24,7 +24,7 @@ fn main() {
             UserSettingsPlugin,
             TilingPlugin,
             MovingPlugin,
-            //MusicPlugin,
+            MusicPlugin,
         ))
         .add_systems(OnEnter(AppState::Setup), setup)
         //the systems responsible for running the game

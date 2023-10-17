@@ -63,6 +63,8 @@ fn apply_move(
     use self::tracker::MoveTracker;
     let mut tracker = MoveTracker::new(board.clone(), positions);
 
+    //todo re-write so that we can make this a one-pass operation (easy)
+    tracker.start_tracking();
     tracker.go(direction);
     tracker.merge(direction);
     tracker.go(direction);
@@ -140,7 +142,7 @@ mod tracker {
             }
         }
 
-        fn transform<F>(&mut self, direction: Direction, tranformation: F)
+        fn transform<F>(&mut self, direction: Direction, transformation: F)
         where
             //stack -> (stack, changed)
             F: Fn(Vec<(usize, usize)>) -> (Vec<(usize, usize)>, bool),
@@ -151,12 +153,16 @@ mod tracker {
                 Up | Down => self.board.columns,
             } {
                 //applying the changes to the current board
-                let (out_stack, changed) = tranformation(self.stack(direction, i).unwrap());
+                let (out_stack, changed) = transformation(self.stack(direction, i).unwrap());
                 self.changed |= changed;
                 for (real_pos, kind) in out_stack {
                     self.tiles[real_pos] = kind
                 }
             }
+        }
+
+        pub fn apply(&mut self, direction: Direction) {
+            self.transform(direction, |mut stack| todo!())
         }
 
         pub fn go(&mut self, direction: Direction) {
@@ -167,7 +173,10 @@ mod tracker {
 
                 while let Some(&(_, kind)) = stack.get(cursor) {
                     if kind != 0 {
-                        changed = true;
+                        if stack[cursor].0 != stack[last].0 {
+                            //there's a change only if we actually move the tile from a spot to another instead of in-place
+                            changed = true;
+                        }
                         //we must set the cursor's tile to zero first because it cursor==last it'd overwrite the data otherwise
                         stack[cursor].1 = 0; // since the tile was moved there's nothing in its stead
                         stack[last].1 = kind; // tile is put in the last free position

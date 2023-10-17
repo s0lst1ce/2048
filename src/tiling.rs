@@ -195,7 +195,7 @@ pub fn spawn_tile(
     let mut value = values.into_iter();
 
     //choosing where to create the new tile if possible
-    let atlas_handle = tiles_atlas.0.clone(); //fixme, there's one too many clone
+    let atlas_handle = tiles_atlas.0.clone();
     let (abscissa, ordinate) = (tiling.horizontal_scale, tiling.vertical_scale);
     commands.spawn_batch(positions.into_iter().map(move |pos| {
         let kind = value.next().unwrap();
