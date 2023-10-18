@@ -5,8 +5,14 @@ use bevy::{
     prelude::*,
     window::{PrimaryWindow, WindowResolution},
 };
+#[cfg(target_arch = "wasm32")]
+use console_error_panic_hook;
 
 fn main() {
+    //to print debug messages to browser console
+    #[cfg(target_arch = "wasm32")]
+    console_error_panic_hook::set_once();
+
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {

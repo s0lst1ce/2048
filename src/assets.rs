@@ -17,13 +17,9 @@ impl TileHandles {
 pub struct TilesAtlas(pub Handle<TextureAtlas>);
 
 fn load_assets(mut tile_handles: ResMut<TileHandles>, asset_server: Res<AssetServer>) {
-    asset_server
-        .load_folder("tiles")
-        .map_err(|err| {
-            error!("missing `assets/tiles` folder");
-            err
-        })
-        .unwrap();
+    for path in TileHandles::paths() {
+        let _handle = asset_server.load::<Image, _>(path);
+    }
     let mut tiles = Vec::with_capacity(TileHandles::TILES.len());
     for path in TileHandles::paths() {
         let handle = asset_server.get_handle(&path);
