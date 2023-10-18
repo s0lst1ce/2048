@@ -1,40 +1,47 @@
-name: deploy-github-page
-
+name: Release WASM (GitHub Pages)
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - rust
+      - master
 
-permissions:
-  contents: write
+env:
+  PUBLIC_URL: /2048/
 
 jobs:
-  build-web:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
+      - name: Setup | Checkout
         uses: actions/checkout@v3
-      - name: Install rust toolchain
-        uses: dtolnay/rust-toolchain@master
+
+      - name: Setup | Trunk
+        uses: jetli/trunk-action@v0.4.0
         with:
-          toolchain: stable
-      - name: Install Dependencies
-        run: sudo apt-get update; sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
-      - name: Install trunk
-        uses: jetli/trunk-action@v0.1.0
-        with:
-          version: 'latest'
-      - name: Add wasm target
+          version: "latest"
+
+      - name: Build | Trunk
         run: |
-          rustup target add wasm32-unknown-unknown
-      - name: Build Release
-        run: |
-          trunk build --release --public-url "${GITHUB_REPOSITORY#*/}"
-      - name: optimize Wasm
-        uses: NiklasEi/wasm-opt-action@v2
+          cd launchers/wasm
+          trunk build --release --public-url ${{ env.PUBLIC_URL }}
+
+      - name: Post Build | Upload dist
+        uses: actions/upload-artifact@v3
         with:
-          file: dist/*.wasm
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4.2.5
+          path: ./launchers/wasm/dist/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup | Download dist
+        uses: actions/download-artifact@v3
+
+      - name: Setup | Place dist
+        run: mv ./artifact ./dist
+
+      - name: Deploy | Github Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          branch: web
-          folder: dist
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist/
