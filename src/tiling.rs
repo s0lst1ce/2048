@@ -154,7 +154,7 @@ pub fn spawn_tile(
     let mut values = vec![];
 
     let mut random = 0;
-    for SpawnTile { position, kind } in new_tiles.into_iter() {
+    for SpawnTile { position, kind } in new_tiles.read() {
         if let Some(pos) = position {
             positions.push(*pos);
         } else {
@@ -256,7 +256,7 @@ fn resize_tiles(
     board: Res<Board>,
     assets: Res<Assets<Image>>,
 ) {
-    let Some(window_dims) = resize.iter().last() else {
+    let Some(window_dims) = resize.read().last() else {
         return;
     };
 

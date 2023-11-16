@@ -21,13 +21,7 @@ pub enum AppState {
     InGame,
 }
 
-impl States for AppState {
-    type Iter = std::array::IntoIter<AppState, 3>;
-
-    fn variants() -> Self::Iter {
-        [AppState::Loading, AppState::Setup, AppState::InGame].into_iter()
-    }
-}
+impl States for AppState {}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FinishReason {

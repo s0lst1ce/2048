@@ -18,11 +18,11 @@ pub struct TilesAtlas(pub Handle<TextureAtlas>);
 
 fn load_assets(mut tile_handles: ResMut<TileHandles>, asset_server: Res<AssetServer>) {
     for path in TileHandles::paths() {
-        let _handle = asset_server.load::<Image, _>(path);
+        let _handle = asset_server.load::<Image>(path);
     }
     let mut tiles = Vec::with_capacity(TileHandles::TILES.len());
     for path in TileHandles::paths() {
-        let handle = asset_server.get_handle(&path);
+        let handle = asset_server.get_handle(&path).unwrap();
         tiles.push(handle);
     }
 
@@ -34,8 +34,11 @@ fn check_assets(
     tile_handles: ResMut<TileHandles>,
     asset_server: Res<AssetServer>,
 ) {
-    if let LoadState::Loaded =
-        asset_server.get_group_load_state(tile_handles.0.iter().map(|handle| handle.id()))
+    if tile_handles
+        .0
+        .iter()
+        .map(|handle| handle.id())
+        .all(|id| asset_server.load_state(id) == LoadState::Loaded)
     {
         info!("Finished loading assets");
         app_state.set(AppState::Setup)
@@ -45,7 +48,6 @@ fn check_assets(
 fn post_load_setup(
     mut commands: Commands,
     tile_handles: Res<TileHandles>,
-    asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut textures: ResMut<Assets<Image>>,
 ) {
@@ -53,14 +55,11 @@ fn post_load_setup(
     let mut texture_atlas_builder = TextureAtlasBuilder::default();
     for handle in &tile_handles.0 {
         let Some(texture) = textures.get(handle) else {
-            warn!(
-                "{:?} did not resolve to an `Image` asset",
-                asset_server.get_handle_path(handle)
-            );
+            warn!("{:?} did not resolve to an `Image` asset", handle.path());
             continue;
         };
 
-        texture_atlas_builder.add_texture(handle.clone(), texture);
+        texture_atlas_builder.add_texture(handle.id(), texture);
     }
 
     let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();

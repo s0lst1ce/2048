@@ -51,7 +51,7 @@ fn apply_move(
     mut new_tile: EventWriter<SpawnTile>,
     board: Res<Board>,
 ) {
-    let Some(&direction) = next_direction.iter().next() else {
+    let Some(&direction) = next_direction.read().next() else {
         return;
     };
 
