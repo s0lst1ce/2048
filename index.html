@@ -1,15 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8"/>
-        <title>Bevy game</title> <!-- ToDo -->
-        <link data-trunk rel="copy-dir" href="assets"/>       
-    </head>
+<!DOCTYPE html><html lang="en"><head>
+        <meta charset="utf-8">
+        <title>2048</title>
+               
+    
+<link rel="preload" href="/2048/b2048-100a9918a926fad6_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+<link rel="modulepreload" href="/2048/b2048-100a9918a926fad6.js"></head>
     <body>
         <div class="game-container">
             <canvas id="bevy">
                 Javascript and support for canvas is required
             </canvas>
         </div>
-    </body>
-</html>
+    
+
+<script type="module">import init from '/2048/b2048-100a9918a926fad6.js';init('/2048/b2048-100a9918a926fad6_bg.wasm');</script></body></html>
