@@ -1,7 +1,11 @@
 name: deploy-github-page
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - master
+      - rust
+
 
 permissions:
   contents: write
