@@ -31,8 +31,10 @@ fn main() {
             TilingPlugin,
             MovingPlugin,
             MusicPlugin,
+            GameInterfacePlugin,
         ))
-        .add_systems(OnEnter(AppState::Setup), setup)
+        .add_systems(OnEnter(AppState::Setup), game_setup)
+        .add_systems(OnExit(AppState::Loading), app_setup)
         //the systems responsible for running the game
         .add_systems(
             Update,
@@ -41,15 +43,18 @@ fn main() {
                     bevy::window::close_on_esc,
                     (game_over.after(spawn_tile),).run_if(in_state(AppState::InGame)),
                 )
-                    .after(setup),
+                    .after(game_setup),
                 debug_info,
             ),
         )
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
+fn app_setup(mut commands: Commands) {
+    commands.spawn(Camera2dBundle::default());
+}
+
+fn game_setup(
     mut spawn_tiles: EventWriter<SpawnTile>,
     mut next_state: ResMut<NextState<AppState>>,
     mut tiling: ResMut<Tiling>,
@@ -58,8 +63,6 @@ fn setup(
     assets: Res<Assets<Image>>,
     window: Query<&Window, With<PrimaryWindow>>,
 ) {
-    commands.spawn(Camera2dBundle::default());
-
     //setting up tile sizes and descriptors for current window and asset dimensions
     let Ok(primary) = window.get_single() else {
         error!("no primary window");

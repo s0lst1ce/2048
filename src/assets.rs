@@ -41,7 +41,7 @@ fn check_assets(
         .all(|id| asset_server.load_state(id) == LoadState::Loaded)
     {
         info!("Finished loading assets");
-        app_state.set(AppState::Setup)
+        app_state.set(AppState::MainMenu)
     }
 }
 

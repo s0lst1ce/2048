@@ -4,12 +4,14 @@ pub mod audio;
 pub mod moving;
 pub mod settings;
 pub mod tiling;
+pub mod ui;
 
 pub use assets::*;
 pub use audio::*;
 pub use moving::*;
 pub use settings::*;
 pub use tiling::*;
+pub use ui::*;
 
 use bevy::prelude::*;
 
@@ -19,6 +21,9 @@ pub enum AppState {
     Loading,
     Setup,
     InGame,
+    MainMenu,
+    GameOverMenu,
+    SettingsMenu,
 }
 
 impl States for AppState {}

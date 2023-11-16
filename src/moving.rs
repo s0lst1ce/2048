@@ -12,7 +12,8 @@ impl Plugin for MovingPlugin {
             (
                 select_direction,
                 apply_move.after(select_direction).before(spawn_tile),
-            ),
+            )
+                .run_if(in_state(AppState::InGame)),
         );
     }
 }
