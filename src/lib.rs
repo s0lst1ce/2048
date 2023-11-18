@@ -24,15 +24,15 @@ pub enum AppState {
     MainMenu,
     GameOverMenu,
     SettingsMenu,
+    Paused,
 }
 
 impl States for AppState {}
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum FinishReason {
+#[derive(Event, Debug, Copy, Clone, PartialEq, Eq)]
+pub enum GameOver {
+    //consider adding a score to this
     Lost,
     Won,
+    Quit,
 }
-
-#[derive(Event, Debug)]
-pub struct GameOver(FinishReason);

@@ -15,6 +15,7 @@ pub struct Keybinds {
     pub move_up: KeyCode,
     pub move_right: KeyCode,
     pub move_down: KeyCode,
+    pub pause_game: KeyCode,
 }
 
 impl Default for Keybinds {
@@ -24,6 +25,7 @@ impl Default for Keybinds {
             move_up: KeyCode::Up,
             move_right: KeyCode::Right,
             move_down: KeyCode::Down,
+            pause_game: KeyCode::Escape,
         }
     }
 }

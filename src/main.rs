@@ -39,11 +39,7 @@ fn main() {
         .add_systems(
             Update,
             (
-                (
-                    bevy::window::close_on_esc,
-                    (game_over.after(spawn_tile),).run_if(in_state(AppState::InGame)),
-                )
-                    .after(game_setup),
+                ((game_over.after(spawn_tile),),).after(game_setup),
                 debug_info,
             ),
         )
@@ -85,11 +81,25 @@ fn game_setup(
     info!("Game setup completed");
 }
 
-fn game_over(game_over: EventReader<GameOver>, mut exit: EventWriter<AppExit>) {
-    if !game_over.is_empty() {
-        info!("Game ended");
-        exit.send(AppExit);
-    }
+fn game_over(
+    mut commands: Commands,
+    mut game_over: EventReader<GameOver>,
+    mut app_state: ResMut<NextState<AppState>>,
+    tiles_query: Query<Entity, With<Tile>>,
+) {
+    game_over.read().enumerate().for_each(|(i, reason)| {
+        if i != 0 {
+            error!("Multiple `GameOver` events in the same tick");
+        }
+        for entity in tiles_query.iter() {
+            commands.entity(entity).despawn()
+        }
+
+        app_state.set(match reason {
+            GameOver::Lost | GameOver::Won => AppState::GameOverMenu,
+            GameOver::Quit => AppState::MainMenu,
+        })
+    });
 }
 
 fn debug_info(_pos: Query<&Position>) {}

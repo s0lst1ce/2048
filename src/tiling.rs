@@ -175,7 +175,7 @@ pub fn spawn_tile(
 
     //we make sure there's enough space to spawn all the tiles necessary
     if occupied.capacity() - occupied.len() < random {
-        game_over.send(GameOver(FinishReason::Lost));
+        game_over.send(GameOver::Lost);
         return;
     }
 

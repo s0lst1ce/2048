@@ -162,10 +162,6 @@ mod tracker {
             }
         }
 
-        pub fn apply(&mut self, direction: Direction) {
-            self.transform(direction, |mut stack| todo!())
-        }
-
         pub fn go(&mut self, direction: Direction) {
             self.transform(direction, |mut stack| {
                 let mut last = 0;
