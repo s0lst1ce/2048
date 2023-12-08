@@ -13,7 +13,7 @@ pub fn spawn_congrats_menu(mut commands: Commands, asset_server: Res<AssetServer
             parent.spawn(TextBundle {
                 text: Text {
                     sections: vec![TextSection::new(
-                        "Congratulations, you made a 2048 tile!",
+                        "Congratulations! \nyou made a 2048 tile!",
                         TextStyle {
                             font: asset_server.load("fonts/FiraMono-Medium.ttf"),
                             font_size: 120.0,
@@ -33,7 +33,7 @@ pub fn trigger_congrats_menu(
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     //2**11=2048
-    if merges.read().any(|merged| merged.power() == 2) {
+    if merges.read().any(|merged| merged.power() == 11) {
         next_state.set(AppState::CongratsMenu)
     }
 }
