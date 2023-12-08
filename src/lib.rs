@@ -15,24 +15,44 @@ pub use ui::*;
 
 use bevy::prelude::*;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum AppState {
     #[default]
     Loading,
     Setup,
     InGame,
     MainMenu,
-    GameOverMenu,
     SettingsMenu,
     Paused,
+    WonMenu,
+    LostMenu,
+    CongratsMenu,
 }
 
-impl States for AppState {}
-
 #[derive(Event, Debug, Copy, Clone, PartialEq, Eq)]
-pub enum GameOver {
-    //consider adding a score to this
-    Lost,
-    Won,
+pub enum FinishGame {
+    GameOver,
     Quit,
+}
+
+#[derive(Debug, Resource, Clone, PartialEq, Eq, Default)]
+pub struct Score(pub u32);
+
+impl Score {
+    pub fn has_won(&self) -> bool {
+        self.0 > 0
+    }
+}
+
+pub fn score_from_merge(mut score: ResMut<Score>, mut merges: EventReader<Merged>) {
+    for merge in merges.read() {
+        score.0 += merge.power()
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
+pub enum Congratulation {
+    Congratulated,
+    #[default]
+    NotYet,
 }

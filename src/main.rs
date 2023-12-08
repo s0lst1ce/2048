@@ -1,7 +1,6 @@
 #![allow(clippy::type_complexity, clippy::too_many_arguments)]
 use b2048::*;
 use bevy::{
-    app::AppExit,
     prelude::*,
     window::{PrimaryWindow, WindowResolution},
 };
@@ -23,8 +22,9 @@ fn main() {
             ..default()
         }))
         .add_state::<AppState>()
-        .add_event::<GameOver>()
+        .add_event::<FinishGame>()
         .insert_resource(ClearColor(Color::WHITE))
+        .init_resource::<Score>()
         .add_plugins((
             GameAssetsPlugin,
             UserSettingsPlugin,
@@ -33,14 +33,15 @@ fn main() {
             MusicPlugin,
             GameInterfacePlugin,
         ))
-        .add_systems(OnEnter(AppState::Setup), game_setup)
+        .add_systems(OnEnter(AppState::Setup), (game_setup, reset_score))
         .add_systems(OnExit(AppState::Loading), app_setup)
         //the systems responsible for running the game
         .add_systems(
             Update,
             (
                 ((game_over.after(spawn_tile),),).after(game_setup),
-                debug_info,
+                detect_stale_board.after(apply_move),
+                score_from_merge,
             ),
         )
         .run();
@@ -52,7 +53,8 @@ fn app_setup(mut commands: Commands) {
 
 fn game_setup(
     mut spawn_tiles: EventWriter<SpawnTile>,
-    mut next_state: ResMut<NextState<AppState>>,
+    mut app_state: ResMut<NextState<AppState>>,
+    mut congrats_state: ResMut<NextState<Congratulation>>,
     mut tiling: ResMut<Tiling>,
     handles: Res<TileHandles>,
     board: Res<Board>,
@@ -75,17 +77,21 @@ fn game_setup(
     //placing initial tiles
     spawn_tiles.send_batch([SpawnTile::default(); 2]);
 
+    //we haven't congratulated yet since no 2048 was created
+    congrats_state.set(Congratulation::NotYet);
+
     //starting the game
-    next_state.set(AppState::InGame);
+    app_state.set(AppState::InGame);
 
     info!("Game setup completed");
 }
 
 fn game_over(
     mut commands: Commands,
-    mut game_over: EventReader<GameOver>,
+    mut game_over: EventReader<FinishGame>,
     mut app_state: ResMut<NextState<AppState>>,
     tiles_query: Query<Entity, With<Tile>>,
+    score: Res<Score>,
 ) {
     game_over.read().enumerate().for_each(|(i, reason)| {
         if i != 0 {
@@ -96,10 +102,18 @@ fn game_over(
         }
 
         app_state.set(match reason {
-            GameOver::Lost | GameOver::Won => AppState::GameOverMenu,
-            GameOver::Quit => AppState::MainMenu,
+            FinishGame::Quit => AppState::MainMenu,
+            FinishGame::GameOver => {
+                if score.has_won() {
+                    AppState::WonMenu
+                } else {
+                    AppState::LostMenu
+                }
+            }
         })
     });
 }
 
-fn debug_info(_pos: Query<&Position>) {}
+fn reset_score(mut score: ResMut<Score>) {
+    score.0 = 0
+}

@@ -17,23 +17,7 @@ pub fn spawn_main_menu(
     tiles: Res<TileHandles>,
 ) {
     commands
-        .spawn((
-            NodeBundle {
-                background_color: Color::rgba(1.0, 1.0, 1.0, 0.8).into(),
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    row_gap: Val::Px(8.0),
-                    column_gap: Val::Px(8.0),
-                    ..default()
-                },
-                ..default()
-            },
-            MainMenu,
-        ))
+        .spawn((MainMenu, default_menu_backdrop()))
         .with_children(|parent| {
             //title
             parent
@@ -89,7 +73,7 @@ pub fn spawn_main_menu(
                 });
 
             //exit button
-            spawn_exit_button(parent, asset_server);
+            ExitButton::spawn(parent, &asset_server);
         });
 }
 

@@ -1,11 +1,17 @@
+//todo make it so text in menus have a dynamic font size based on screen size
+
 use crate::*;
 use bevy::{app::AppExit, prelude::*};
 
+mod congrats;
 mod main_menu;
 mod pause_menu;
+mod won_menu;
 
+use congrats::*;
 use main_menu::*;
 use pause_menu::*;
+use won_menu::*;
 
 #[derive(Debug)]
 pub struct GameInterfacePlugin;
@@ -13,8 +19,15 @@ pub struct GameInterfacePlugin;
 impl Plugin for GameInterfacePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<TogglePause>()
+            .add_state::<Congratulation>()
             .add_systems(OnEnter(AppState::MainMenu), spawn_main_menu)
             .add_systems(OnExit(AppState::MainMenu), despawn_menu::<MainMenu>)
+            .add_systems(OnEnter(AppState::Paused), spawn_pause_menu)
+            .add_systems(OnExit(AppState::Paused), despawn_menu::<PauseMenu>)
+            .add_systems(OnEnter(AppState::WonMenu), spawn_won_menu)
+            .add_systems(OnExit(AppState::WonMenu), despawn_menu::<WonMenu>)
+            .add_systems(OnEnter(AppState::CongratsMenu), spawn_congrats_menu)
+            .add_systems(OnExit(AppState::CongratsMenu), despawn_menu::<CongratsMenu>)
             .add_systems(
                 Update,
                 (
@@ -24,10 +37,12 @@ impl Plugin for GameInterfacePlugin {
                     pause_with_keybind,
                     resume_game,
                     back_to_menu,
+                    trigger_congrats_menu
+                        .after(score_from_merge)
+                        .run_if(in_state(Congratulation::NotYet)),
+                    return_to_game.run_if(in_state(AppState::CongratsMenu)),
                 ),
-            )
-            .add_systems(OnEnter(AppState::Paused), spawn_pause_menu)
-            .add_systems(OnExit(AppState::Paused), despawn_menu::<PauseMenu>);
+            );
     }
 }
 
@@ -35,6 +50,37 @@ pub(crate) trait Menu: Component {}
 
 #[derive(Debug, Component)]
 pub(crate) struct ExitButton;
+
+impl ExitButton {
+    pub(crate) fn spawn(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>) {
+        parent
+            .spawn((
+                ExitButton,
+                ButtonBundle {
+                    background_color: Color::hex("f65e3b").unwrap().into(),
+                    style: DEFAULT_BUTTON_STYLE,
+                    ..default()
+                },
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle {
+                    text: Text {
+                        sections: vec![TextSection::new(
+                            "Exit",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+                                font_size: 32.0,
+                                color: Color::WHITE,
+                            },
+                        )],
+                        alignment: TextAlignment::Center,
+                        ..default()
+                    },
+                    ..default()
+                });
+            });
+    }
+}
 
 pub(crate) const DEFAULT_BUTTON_STYLE: Style = {
     let mut style = Style::DEFAULT;
@@ -99,31 +145,62 @@ fn toggle_pause(
     toggle_pause.clear();
 }
 
-pub(crate) fn spawn_exit_button(parent: &mut ChildBuilder, asset_server: Res<AssetServer>) {
-    parent
-        .spawn((
-            ExitButton,
-            ButtonBundle {
-                background_color: Color::hex("f65e3b").unwrap().into(),
-                style: DEFAULT_BUTTON_STYLE,
-                ..default()
-            },
-        ))
-        .with_children(|parent| {
-            parent.spawn(TextBundle {
-                text: Text {
-                    sections: vec![TextSection::new(
-                        "Exit",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraMono-Medium.ttf"),
-                            font_size: 32.0,
-                            color: Color::WHITE,
-                        },
-                    )],
-                    alignment: TextAlignment::Center,
+pub(crate) fn default_menu_backdrop() -> NodeBundle {
+    NodeBundle {
+        background_color: Color::rgba(1.0, 1.0, 1.0, 0.8).into(),
+        style: Style {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            row_gap: Val::Px(8.0),
+            column_gap: Val::Px(8.0),
+            ..default()
+        },
+        ..default()
+    }
+}
+
+#[derive(Debug, Component)]
+pub struct BackToMenuButton;
+
+pub fn back_to_menu(
+    query: Query<&Interaction, (Changed<Interaction>, With<BackToMenuButton>)>,
+    mut game_over: EventWriter<FinishGame>,
+) {
+    if let Ok(Interaction::Pressed) = query.get_single() {
+        game_over.send(FinishGame::Quit)
+    }
+}
+
+impl BackToMenuButton {
+    pub(crate) fn spawn(parent: &mut ChildBuilder, asset_server: &Res<AssetServer>) {
+        parent
+            .spawn((
+                BackToMenuButton,
+                ButtonBundle {
+                    style: DEFAULT_BUTTON_STYLE,
+                    background_color: Color::hex("776e65").unwrap().into(),
                     ..default()
                 },
-                ..default()
+            ))
+            .with_children(|parent| {
+                parent.spawn(TextBundle {
+                    text: Text {
+                        sections: vec![TextSection::new(
+                            "Main Menu",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+                                font_size: 32.0,
+                                color: Color::WHITE,
+                            },
+                        )],
+                        alignment: TextAlignment::Center,
+                        ..default()
+                    },
+                    ..default()
+                });
             });
-        });
+    }
 }

@@ -7,14 +7,16 @@ pub struct MovingPlugin;
 
 impl Plugin for MovingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<Direction>().add_systems(
-            Update,
-            (
-                select_direction,
-                apply_move.after(select_direction).before(spawn_tile),
-            )
-                .run_if(in_state(AppState::InGame)),
-        );
+        app.add_event::<Merged>()
+            .add_event::<Direction>()
+            .add_systems(
+                Update,
+                (
+                    select_direction,
+                    apply_move.after(select_direction).before(spawn_tile),
+                )
+                    .run_if(in_state(AppState::InGame)),
+            );
     }
 }
 
@@ -45,11 +47,12 @@ fn select_direction(
     next_direction.send(direction)
 }
 
-fn apply_move(
+pub fn apply_move(
     mut commands: Commands,
     mut tiles: Query<(Entity, &mut Position, &mut TileKind), With<Tile>>,
     mut next_direction: EventReader<Direction>,
     mut new_tile: EventWriter<SpawnTile>,
+    mut merged: EventWriter<Merged>,
     board: Res<Board>,
 ) {
     let Some(&direction) = next_direction.read().next() else {
@@ -64,11 +67,9 @@ fn apply_move(
     use self::tracker::MoveTracker;
     let mut tracker = MoveTracker::new(board.clone(), positions);
 
-    //todo re-write so that we can make this a one-pass operation (easy)
     tracker.start_tracking();
-    tracker.go(direction);
-    tracker.merge(direction);
-    tracker.go(direction);
+    let changed = tracker.apply(direction);
+    merged.send_batch(changed);
 
     if tracker.has_changed() {
         let tracker_tiles = tracker.tiles();
@@ -95,8 +96,21 @@ fn apply_move(
     }
 }
 
+#[derive(Debug, Clone, Event)]
+pub struct Merged(u32);
+
+impl Merged {
+    pub fn from_power(pow: impl Into<u32>) -> Self {
+        Self(pow.into())
+    }
+
+    pub fn power(&self) -> u32 {
+        2u32.pow(self.0)
+    }
+}
+
 mod tracker {
-    use crate::{Board, Position, TileKind};
+    use crate::{Board, Merged, Position, TileKind};
 
     use super::Direction;
 
@@ -143,10 +157,10 @@ mod tracker {
             }
         }
 
-        fn transform<F>(&mut self, direction: Direction, transformation: F)
+        fn transform<F>(&mut self, direction: Direction, mut transformation: F)
         where
             //stack -> (stack, changed)
-            F: Fn(Vec<(usize, usize)>) -> (Vec<(usize, usize)>, bool),
+            F: FnMut(Vec<(usize, usize)>) -> (Vec<(usize, usize)>, bool),
         {
             use Direction::*;
             for i in 0..match direction {
@@ -162,42 +176,57 @@ mod tracker {
             }
         }
 
-        pub fn go(&mut self, direction: Direction) {
+        pub fn apply(&mut self, direction: Direction) -> Vec<Merged> {
+            //todo re-write so that we can make this a one-pass operation (easy)
+            self.go(direction);
+            let merged = self.merge(direction);
+            self.go(direction);
+            merged
+        }
+
+        fn go(&mut self, direction: Direction) {
             self.transform(direction, |mut stack| {
-                let mut last = 0;
-                let mut cursor = last;
+                //first free tile
+                let mut free = 0;
+                //needle tracking the tile currently being operated on
+                let mut cursor = free;
+                //if any change to the board occured
                 let mut changed = false;
 
                 while let Some(&(_, kind)) = stack.get(cursor) {
                     if kind != 0 {
-                        if stack[cursor].0 != stack[last].0 {
+                        if stack[cursor].0 != stack[free].0 {
                             //there's a change only if we actually move the tile from a spot to another instead of in-place
                             changed = true;
                         }
-                        //we must set the cursor's tile to zero first because it cursor==last it'd overwrite the data otherwise
+                        //we must set the cursor's tile to zero first because it cursor==free it'd overwrite the data otherwise
                         stack[cursor].1 = 0; // since the tile was moved there's nothing in its stead
-                        stack[last].1 = kind; // tile is put in the last free position
+                        stack[free].1 = kind; // tile is put in the first free position
 
-                        last += 1; // the next free spot is the next position
+                        free += 1; // the next free spot is the next position
                     }
                     cursor += 1
                 }
+
                 (stack, changed)
             });
         }
 
-        pub fn merge(&mut self, direction: Direction) {
+        fn merge(&mut self, direction: Direction) -> Vec<Merged> {
+            let mut merged = Vec::new();
             self.transform(direction, |mut stack| {
                 let mut changed = false;
                 for j in 0..(stack.len() - 1) {
                     if stack[j].1 != 0 && stack[j].1 == stack[j + 1].1 {
                         changed = true;
+                        merged.push(Merged::from_power(stack[j].1 as u32));
                         stack[j].1 += 1; //the tile we merge into, we simply increase the index by one since the value is the power, not the shown value itself
                         stack[j + 1].1 = 0; //the tile that has now been destroyed for the merge
                     }
                 }
                 (stack, changed)
             });
+            merged
         }
 
         pub fn tiles(&mut self) -> Vec<(Position, TileKind)> {

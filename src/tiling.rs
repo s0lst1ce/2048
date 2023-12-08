@@ -144,7 +144,7 @@ pub fn spawn_tile(
     board: Res<Board>,
     tiling: Res<Tiling>,
     mut new_tiles: EventReader<SpawnTile>,
-    mut game_over: EventWriter<GameOver>,
+    mut game_over: EventWriter<FinishGame>,
     tiles_atlas: Res<TilesAtlas>,
 ) {
     if new_tiles.is_empty() {
@@ -175,7 +175,7 @@ pub fn spawn_tile(
 
     //we make sure there's enough space to spawn all the tiles necessary
     if occupied.capacity() - occupied.len() < random {
-        game_over.send(GameOver::Lost);
+        game_over.send(FinishGame::GameOver);
         return;
     }
 
@@ -307,5 +307,34 @@ impl Plugin for TilingPlugin {
                     .run_if(in_state(AppState::InGame)),
             )
             .add_systems(PostUpdate, spawn_tile);
+    }
+}
+
+pub fn detect_stale_board(
+    query: Query<(&Position, &TileKind), With<Tile>>,
+    board: Res<Board>,
+    mut game_over: EventWriter<FinishGame>,
+) {
+    let mut tiles: Vec<_> = query.iter().collect();
+
+    //if we're in a state where no space is left
+    if tiles.len() == board.rows * board.columns {
+        tiles.sort_by(|(pos1, _), (pos2, _)| pos1.cmp(pos2));
+        for (i, (_, kind)) in tiles.iter().enumerate() {
+            //checking if right neighbour has the same value
+            if let Some((_, val)) = tiles.get(i + 1) {
+                //if this tile is the last of the row then we don't have a right neighbour, and are instead looking
+                //at the first tile of the next row
+                if val == kind && i < board.columns {
+                    return;
+                }
+            //checking if the down neighbour has the same value
+            } else if let Some((_, val)) = tiles.get(i + board.columns) {
+                if val == kind {
+                    return;
+                }
+            }
+        }
+        game_over.send(FinishGame::GameOver)
     }
 }
