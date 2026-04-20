@@ -10,6 +10,7 @@ use rand::{
     seq::{IteratorRandom, SliceRandom},
     thread_rng,
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Resource, PartialEq, Clone)]
 pub struct Tiling {
@@ -89,7 +90,7 @@ impl Position {
     }
 }
 
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, Serialize, Deserialize)]
 pub struct Board {
     pub columns: usize,
     pub rows: usize,
@@ -325,7 +326,10 @@ pub fn detect_stale_board(
             if let Some((_, val)) = tiles.get(i + 1) {
                 //if this tile is the last of the row then we don't have a right neighbour, and are instead looking
                 //at the first tile of the next row
-                if val == kind && i < board.columns {
+                // Modulo to get only the column and comparing to the number of columns -1 to know if we're on the last column
+                // Otherwise with i<board.columns it only works for the first row.
+                // All the next only will never satisfy the condition.
+                if val == kind && (i % board.columns) < board.columns - 1 {
                     return;
                 }
             //checking if the down neighbour has the same value
