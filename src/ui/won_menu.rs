@@ -15,6 +15,7 @@ pub fn spawn_won_menu(mut commands: Commands, asset_server: Res<AssetServer>, sc
                 text: Text {
                     sections: vec![
                         TextSection::new(
+                            //fixme find a font that supports emojis
                             "🎉 Congratulations! 🎉",
                             TextStyle {
                                 font: font.clone(),

@@ -32,6 +32,7 @@ fn main() {
             MovingPlugin,
             MusicPlugin,
             GameInterfacePlugin,
+            RecordPlugin,
         ))
         .add_systems(OnEnter(AppState::Setup), (game_setup, reset_score))
         .add_systems(OnExit(AppState::Loading), app_setup)
@@ -54,7 +55,7 @@ fn app_setup(mut commands: Commands) {
 fn game_setup(
     mut spawn_tiles: EventWriter<SpawnTile>,
     mut app_state: ResMut<NextState<AppState>>,
-    mut congrats_state: ResMut<NextState<Congratulation>>,
+    mut congrats_state: ResMut<NextState<WinState>>,
     mut tiling: ResMut<Tiling>,
     handles: Res<TileHandles>,
     board: Res<Board>,
@@ -78,7 +79,7 @@ fn game_setup(
     spawn_tiles.send_batch([SpawnTile::default(); 2]);
 
     //we haven't congratulated yet since no 2048 was created
-    congrats_state.set(Congratulation::NotYet);
+    congrats_state.set(WinState::NotYet);
 
     //starting the game
     app_state.set(AppState::InGame);
@@ -90,8 +91,8 @@ fn game_over(
     mut commands: Commands,
     mut game_over: EventReader<FinishGame>,
     mut app_state: ResMut<NextState<AppState>>,
+    win_state: Res<State<WinState>>,
     tiles_query: Query<Entity, With<Tile>>,
-    score: Res<Score>,
 ) {
     game_over.read().enumerate().for_each(|(i, reason)| {
         if i != 0 {
@@ -104,7 +105,7 @@ fn game_over(
         app_state.set(match reason {
             FinishGame::Quit => AppState::MainMenu,
             FinishGame::GameOver => {
-                if score.has_won() {
+                if win_state.get() == &WinState::Won {
                     AppState::WonMenu
                 } else {
                     AppState::LostMenu

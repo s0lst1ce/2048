@@ -40,13 +40,13 @@ pub fn trigger_congrats_menu(
 
 pub fn return_to_game(
     mut next_state: ResMut<NextState<AppState>>,
-    mut next_congratulated: ResMut<NextState<Congratulation>>,
+    mut next_congratulated: ResMut<NextState<WinState>>,
     mouse_buttons: Res<Input<MouseButton>>,
     keyboard_buttons: Res<Input<KeyCode>>,
 ) {
     //if any input is registered from the user we get them back to the game
     if mouse_buttons.get_pressed().len() != 0 || keyboard_buttons.get_pressed().len() != 0 {
         next_state.set(AppState::InGame);
-        next_congratulated.set(Congratulation::Congratulated);
+        next_congratulated.set(WinState::Won);
     }
 }

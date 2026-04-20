@@ -2,6 +2,7 @@
 pub mod assets;
 pub mod audio;
 pub mod moving;
+pub mod record;
 pub mod settings;
 pub mod tiling;
 pub mod ui;
@@ -9,6 +10,7 @@ pub mod ui;
 pub use assets::*;
 pub use audio::*;
 pub use moving::*;
+pub use record::*;
 pub use settings::*;
 pub use tiling::*;
 pub use ui::*;
@@ -38,12 +40,6 @@ pub enum FinishGame {
 #[derive(Debug, Resource, Clone, PartialEq, Eq, Default)]
 pub struct Score(pub u32);
 
-impl Score {
-    pub fn has_won(&self) -> bool {
-        self.0 > 0
-    }
-}
-
 pub fn score_from_merge(mut score: ResMut<Score>, mut merges: EventReader<Merged>) {
     for merge in merges.read() {
         score.0 += merge.power()
@@ -51,8 +47,8 @@ pub fn score_from_merge(mut score: ResMut<Score>, mut merges: EventReader<Merged
 }
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
-pub enum Congratulation {
-    Congratulated,
+pub enum WinState {
+    Won,
     #[default]
     NotYet,
 }

@@ -4,11 +4,13 @@ use crate::*;
 use bevy::{app::AppExit, prelude::*};
 
 mod congrats;
+mod lost_menu;
 mod main_menu;
 mod pause_menu;
 mod won_menu;
 
 use congrats::*;
+use lost_menu::*;
 use main_menu::*;
 use pause_menu::*;
 use won_menu::*;
@@ -19,13 +21,15 @@ pub struct GameInterfacePlugin;
 impl Plugin for GameInterfacePlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<TogglePause>()
-            .add_state::<Congratulation>()
+            .add_state::<WinState>()
             .add_systems(OnEnter(AppState::MainMenu), spawn_main_menu)
             .add_systems(OnExit(AppState::MainMenu), despawn_menu::<MainMenu>)
             .add_systems(OnEnter(AppState::Paused), spawn_pause_menu)
             .add_systems(OnExit(AppState::Paused), despawn_menu::<PauseMenu>)
             .add_systems(OnEnter(AppState::WonMenu), spawn_won_menu)
             .add_systems(OnExit(AppState::WonMenu), despawn_menu::<WonMenu>)
+            .add_systems(OnEnter(AppState::LostMenu), spawn_lost_menu)
+            .add_systems(OnExit(AppState::LostMenu), despawn_menu::<LostMenu>)
             .add_systems(OnEnter(AppState::CongratsMenu), spawn_congrats_menu)
             .add_systems(OnExit(AppState::CongratsMenu), despawn_menu::<CongratsMenu>)
             .add_systems(
@@ -39,7 +43,7 @@ impl Plugin for GameInterfacePlugin {
                     back_to_menu,
                     trigger_congrats_menu
                         .after(score_from_merge)
-                        .run_if(in_state(Congratulation::NotYet)),
+                        .run_if(in_state(WinState::NotYet)),
                     return_to_game.run_if(in_state(AppState::CongratsMenu)),
                 ),
             );
